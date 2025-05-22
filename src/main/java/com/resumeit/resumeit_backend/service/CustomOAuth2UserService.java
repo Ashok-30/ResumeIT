@@ -1,11 +1,11 @@
 package com.resumeit.resumeit_backend.service;
 
-import com.resumeit.resumeit_backend.model.CustomOAuth2User;
 import com.resumeit.resumeit_backend.model.User;
 import com.resumeit.resumeit_backend.repository.UserRepository;
+import com.resumeit.resumeit_backend.model.CustomOAuth2User;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
-import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,26 +18,25 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
     private final UserRepository userRepository;
 
-
     public CustomOAuth2UserService(UserRepository userRepository) {
         this.userRepository = userRepository;
-
     }
 
     @Override
     @Transactional
     public OAuth2User loadUser(OAuth2UserRequest userRequest) {
-        System.out.println("===> Inside CustomOAuth2UserService.loadUser()");
+        System.out.println("===> OAuth2: inside loadUser");
+
         OAuth2User oAuth2User = super.loadUser(userRequest);
         Map<String, Object> attributes = oAuth2User.getAttributes();
+        String email = (String) attributes.get("email");
 
-        String email = attributes.get("email") != null ? attributes.get("email").toString().toLowerCase() : null;
         if (email == null) {
-            throw new IllegalStateException("Email not provided by OAuth2 provider");
+            throw new IllegalArgumentException("Email not found in OAuth2 response.");
         }
 
         User user = userRepository.findByEmailId(email).orElseGet(() -> {
-            System.out.println("===> Creating new user: " + email);
+            System.out.println("===> Creating new user for email: " + email);
             User newUser = User.builder()
                     .emailId(email)
                     .password("")
@@ -46,14 +45,11 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             return userRepository.saveAndFlush(newUser);
         });
 
-        System.out.println("===> Returning OAuth2User with: " + email);
-
         return new CustomOAuth2User(
                 user,
-                oAuth2User.getAuthorities(),
+                Collections.singleton(new SimpleGrantedAuthority("ROLE_USER")),
                 attributes,
                 "email"
         );
     }
-
 }

@@ -52,3 +52,8 @@ mvnw.cmd
 
 # macOS
 .DS_Store
+
+# Ignore all files inside uploads folder
+/uploads/*
+# But keep the folder itself by keeping this empty file
+!/uploads/.gitkeep
