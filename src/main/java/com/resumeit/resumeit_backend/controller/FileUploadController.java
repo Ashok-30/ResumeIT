@@ -21,20 +21,31 @@ public class FileUploadController {
     private final FileUploadService fileUploadService;
     private final UserRepository userRepository;
 
+
     @PostMapping("/upload")
     public ResponseEntity<?> uploadResumes(@RequestParam("projectName") String projectName,
                                            @RequestParam("files") List<MultipartFile> files,
-                                           @AuthenticationPrincipal(expression = "username") String email) throws IOException {
+                                           @AuthenticationPrincipal org.springframework.security.core.userdetails.User principal) throws IOException {
+
+        String email = principal.getUsername();
         User user = userRepository.findByEmailId(email).orElseThrow();
-        fileUploadService.uploadFiles(user.getUserType(), projectName, files);
+
+        fileUploadService.uploadFiles(user.getUserType(), email, projectName, files);
+
         return ResponseEntity.ok("Files uploaded successfully.");
     }
+
+
+
     @PostMapping("/upload-description")
     public ResponseEntity<?> uploadJobDescription(@RequestParam("projectName") String projectName,
-                                                  @RequestParam("description") String description) throws IOException {
-        fileUploadService.uploadJobDescription(projectName, description);
+                                                  @RequestParam("description") String description,
+                                                  @AuthenticationPrincipal org.springframework.security.core.userdetails.User principal) throws IOException {
+
+        String email = principal.getUsername();
+        User user = userRepository.findByEmailId(email).orElseThrow();
+
+        fileUploadService.uploadJobDescription(email, projectName, description);
         return ResponseEntity.ok("Job description uploaded successfully.");
     }
-
-
 }
