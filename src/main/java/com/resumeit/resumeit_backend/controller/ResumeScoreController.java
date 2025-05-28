@@ -17,7 +17,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
+
 
 @RestController
 @RequestMapping("/api")
@@ -82,4 +82,63 @@ public class ResumeScoreController {
         String json = response.block();
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(json);
     }
+
+
+    @PostMapping("/generate-questions")
+    public ResponseEntity<?> generateQuestions(@RequestParam("projectName") String projectName,
+                                               @AuthenticationPrincipal User principal) {
+
+        String email = principal.getUsername();
+        Path userProjectFolder = Paths.get("uploads", email, projectName);
+        File folder = userProjectFolder.toFile();
+
+        if (!folder.exists() || !folder.isDirectory()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Project folder not found.");
+        }
+
+        // Find job description and a single resume
+        File jobDescFile = Arrays.stream(folder.listFiles())
+                .filter(file -> file.getName().toLowerCase().contains("job"))
+                .findFirst()
+                .orElse(null);
+
+        File resumeFile = Arrays.stream(folder.listFiles())
+                .filter(file -> !file.equals(jobDescFile))
+                .findFirst()
+                .orElse(null);
+
+        if (jobDescFile == null || resumeFile == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Missing job description or a resume.");
+        }
+
+        // Build request
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("job_description", new FileSystemResource(jobDescFile));
+        body.add("resume", new FileSystemResource(resumeFile));
+
+        // Send to Flask
+        Mono<String> response = webClient.post()
+                .uri("/generate-questions")
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .bodyValue(body)
+                .retrieve()
+                .bodyToMono(String.class);
+
+
+        try {
+            String json = response.block();
+            System.out.println(">>> Flask Response: " + json);
+            return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(json);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error calling Flask service: " + e.getMessage());
+        }
+
+
+
+    }
+
+
+
 }
