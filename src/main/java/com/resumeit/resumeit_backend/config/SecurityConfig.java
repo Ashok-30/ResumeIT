@@ -64,8 +64,12 @@ public class SecurityConfig {
                             User user = userRepository.findByEmailId(email).orElseThrow();
                             String token = jwtUtil.generateToken(email, user.getUserType().name());
 
-                            response.setContentType("application/json");
-                            response.getWriter().write("{\"token\":\"" + token + "\",\"userType\":\"" + user.getUserType().name() + "\"}");
+                            String redirectUrl = "http://localhost:4200/oauth2/redirect"
+                                    + "?token=" + token
+                                    + "&userType=" + user.getUserType().name();
+
+                            response.sendRedirect(redirectUrl);
+
                         })
                 )
 
