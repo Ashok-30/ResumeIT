@@ -3,6 +3,7 @@ package com.resumeit.resumeit_backend.controller;
 import com.resumeit.resumeit_backend.model.User;
 import com.resumeit.resumeit_backend.repository.UserRepository;
 import com.resumeit.resumeit_backend.util.JwtUtil;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -97,6 +98,18 @@ public class AuthController {
         response.put("token", token);
         response.put("userType", user.getUserType().name());
         return ResponseEntity.ok(response);
+    }
+    @PostMapping("/logout")
+    public ResponseEntity<String> logout(HttpServletRequest request) {
+        String authHeader = request.getHeader("Authorization");
+
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String jwt = authHeader.substring(7);
+            System.out.println("Logout requested for token: " + jwt);
+            // You can add blacklist logic here if needed
+        }
+
+        return ResponseEntity.ok("Logout successful");
     }
 
     @PutMapping("/update-user-type")
